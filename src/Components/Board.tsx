@@ -1,7 +1,9 @@
-import { useRef } from "react";
+import { useForm } from "react-hook-form";
 import { Droppable } from "react-beautiful-dnd";
 import styled from "styled-components";
 import DragabbleCard from "./DragabbleCard";
+import { ITodo, toDoState } from "../atoms";
+import { useSetRecoilState } from "recoil";
 
 const Wrapper = styled.div`
   padding-top: 10px;
@@ -14,6 +16,15 @@ const Wrapper = styled.div`
 
 const Title = styled.div`
   text-align: center;
+`;
+
+const Form = styled.form`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  input {
+    width: 95%;
+  }
 `;
 
 interface IAreaProps {
@@ -34,21 +45,40 @@ const Area = styled.div<IAreaProps>`
 `;
 
 interface IBoardProps {
-  toDos: string[];
+  toDos: ITodo[];
   boardId: string;
 }
 
+interface IForm {
+  toDo: string;
+}
+
 function Board({ toDos, boardId }: IBoardProps) {
-  const inputfRef = useRef<HTMLInputElement>(null);
-  const onClick = () => {
-    inputfRef.current?.focus();
+  const setToDos = useSetRecoilState(toDoState);
+  const { register, setValue, handleSubmit } = useForm<IForm>();
+  const onValid = ({ toDo }: IForm) => {
+    const newToDo = {
+      id: Date.now(),
+      text: toDo,
+    };
+    setToDos((allBoards) => {
+      return {
+        ...allBoards,
+        [boardId]: [...allBoards[boardId], newToDo],
+      };
+    });
+    setValue("toDo", "");
   };
   return (
     <Wrapper>
       <Title>{boardId}</Title>
-      {/* ref={inputfRef}을 함으로써 input태그를 가져올 수 있게 된다 */}
-      <input ref={inputfRef} placeholder='grab me' />
-      <button onClick={onClick}>Click me</button>
+      <Form onSubmit={handleSubmit(onValid)}>
+        <input
+          {...register("toDo", { required: true })}
+          type='text'
+          placeholder={`Add task on ${boardId}`}
+        />
+      </Form>
       <Droppable droppableId={boardId}>
         {(magic, info) => (
           <Area
@@ -58,7 +88,12 @@ function Board({ toDos, boardId }: IBoardProps) {
             {...magic.droppableProps}
           >
             {toDos.map((toDo, index) => (
-              <DragabbleCard key={toDo} index={index} toDo={toDo} />
+              <DragabbleCard
+                key={toDo.id}
+                index={index}
+                toDoId={toDo.id}
+                toDoText={toDo.text}
+              />
             ))}
             {magic.placeholder}
           </Area>
